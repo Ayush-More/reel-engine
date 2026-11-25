@@ -22,7 +22,7 @@ Real LLM: set `llm.provider: anthropic` in `config/settings.yaml`, `pip install 
 `src/reels/contracts` (Pydantic, single source of truth) · `scripting` (LLM interface + repair loop) ·
 `validation` (deterministic script rules) · `alignment` (caption grouping, retime to audio) ·
 `publishing` (guard + dry-run adapter, live stub) · `storage` (SQLite job store, atomic artefacts) ·
-`monitoring` (JSON logs with redaction) · `orchestrator.py` · `cli.py` (argparse; swap to Typer if preferred).
+`monitoring` (JSON logs with redaction) · `orchestrator.py` · `cli.py` (Typer commands).
 
 ## Status of this starter
 - Implemented: contracts, example Reel, rules, caption grouping, retime, job store, resume, logging, dry-run publisher, CLI.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 ROLE_ORDER = ["HOOK", "PROBLEM", "ANALOGY", "MECHANISM", "TAKEAWAY", "CTA"]
 REQUIRED_ROLES = ["PROBLEM", "ANALOGY", "MECHANISM", "TAKEAWAY", "CTA"]
@@ -93,9 +94,9 @@ def validate_script_rules(script: Any, rules: dict[str, Any] | None = None) -> l
         actual_dur = b.end - b.start
         estimated_dur = estimate_duration(b.narration)
         if estimated_dur > 0 and abs(actual_dur - estimated_dur) / estimated_dur > DURATION_TOLERANCE:
-            warn("duration_estimate_beat",
-                 f"beat duration {actual_dur:.1f}s vs estimated {estimated_dur:.1f}s "
-                 f"(>{DURATION_TOLERANCE*100:.0f}% off at {DEFAULT_WPS} w/s)", b.id)
+            err("duration_estimate_beat",
+                f"beat duration {actual_dur:.1f}s vs estimated {estimated_dur:.1f}s "
+                f"(>{DURATION_TOLERANCE*100:.0f}% off at {DEFAULT_WPS} w/s)", b.id)
 
     # per-beat
     claim_ids = {c.id for c in script.claims}
@@ -124,12 +125,19 @@ def validate_script_rules(script: Any, rules: dict[str, Any] | None = None) -> l
     for c in script.claims:
         if not c.is_analogy and not c.source_urls:
             err("claim_unsourced", f"factual claim {c.id} has no source URL")
+        for source_url in c.source_urls:
+            parsed = urlparse(source_url.strip())
+            if parsed.scheme not in ("http", "https") or not parsed.netloc:
+                err("claim_source_invalid", f"claim {c.id} has invalid source URL {source_url!r}")
         if not c.is_analogy and not c.verified:
             warn("claim_unverified", f"claim {c.id} not yet verified by the research stage")
     used = {cid for b in beats for cid in b.claim_ids}
     for c in script.claims:
         if c.id not in used:
-            warn("claim_unused", f"claim {c.id} is never referenced by a beat")
+            if c.is_analogy:
+                warn("claim_unused", f"claim {c.id} is never referenced by a beat")
+            else:
+                err("claim_uncovered", f"factual claim {c.id} is not referenced by any beat")
     return issues
 
 

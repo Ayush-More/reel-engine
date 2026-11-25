@@ -100,7 +100,7 @@ def generate_script_stage(ctx: Ctx) -> dict[str, Any]:
     _check_cost_guard(ctx)  # guard before paid LLM call
     topic = Topic.model_validate(ctx.files.read_json("topic.json"))
     rules = ctx.settings.script_rules
-    input_hash = hash_obj([ctx.files.read_json("topic.json"), rules])
+    input_hash = hash_obj(_script_stage_inputs(ctx))
     try:
         script, issues = generate_script(ctx.llm, topic, ROOT / "prompts", rules,
                                          max_repairs=int(ctx.settings.get("llm.max_repair_attempts", 2)))
@@ -122,7 +122,7 @@ def validate_script_stage(ctx: Ctx) -> dict[str, Any]:
     ctx.files.write_json("validation_report.json", [str(i) for i in issues])
     if has_errors(issues):
         raise ValueError("script rules failed: " + "; ".join(str(i) for i in issues if i.severity == "error"))
-    input_hash = hash_obj([data, ctx.settings.script_rules])
+    input_hash = hash_obj(_validate_stage_inputs(ctx))
     ctx.files.write_artefact("script.validated.json", script.model_dump(mode="json"),
                              producer="validation.script_rules", input_hash=input_hash)
     return {}
@@ -141,7 +141,7 @@ def plan_scenes(ctx: Ctx) -> dict[str, Any]:
             "headline": b.headline, "transition": b.transition,
             "timing_source": "script_estimate",  # becomes 'audio_alignment' after Phase 2 retime
         })
-    input_hash = hash_obj(data)
+    input_hash = hash_obj(_scene_plan_stage_inputs(ctx))
     ctx.files.write_artefact("scene_plan.json", {"fps": FPS, "size": [1080, 1920], "scenes": scenes},
                              producer="orchestrator.plan_scenes", input_hash=input_hash)
     return {}
@@ -154,15 +154,14 @@ def _not_yet(phase: int, what: str) -> Callable[[Ctx], dict[str, Any]]:
 
 
 def build_stages() -> list[Stage]:
-    cfg = lambda ctx: {"rules": ctx.settings.script_rules, "llm": ctx.settings.get("llm")}
     return [
         Stage("discover_topic", discover_topic, lambda c: _file_hash(c, "topic.json")),
         Stage("research_topic", research_topic, lambda c: "n/a"),
         Stage("generate_concept", generate_concept, lambda c: "n/a"),
         Stage("generate_script", generate_script_stage,
-              lambda c: [_file_hash(c, "topic.json"), cfg(c), _file_hash_prompts()]),
-        Stage("validate_script", validate_script_stage, lambda c: [_file_hash(c, "script.json"), cfg(c)]),
-        Stage("plan_scenes", plan_scenes, lambda c: _file_hash(c, "script.validated.json")),
+              _script_stage_inputs),
+        Stage("validate_script", validate_script_stage, _validate_stage_inputs),
+        Stage("plan_scenes", plan_scenes, _scene_plan_stage_inputs),
         Stage("generate_voiceover", _not_yet(2, "ElevenLabs TTS"), lambda c: "-", 2),
         Stage("align_audio", _not_yet(2, "forced alignment"), lambda c: "-", 2),
         Stage("generate_visual_assets", _not_yet(2, "render_props + assets"), lambda c: "-", 2),
@@ -176,6 +175,24 @@ def build_stages() -> list[Stage]:
 
 def _file_hash_prompts() -> str:
     return hash_obj([(ROOT / "prompts" / n).read_text(encoding="utf-8") for n in ("script.md", "repair.md")])
+
+
+def _script_stage_inputs(ctx: Ctx) -> list[Any]:
+    cfg = {"rules": ctx.settings.script_rules, "llm": ctx.settings.get("llm")}
+    mock_input_hash = None
+    if ctx.llm.name == "mock":
+        example = ROOT / "examples" / "tokens_reel.json"
+        mock_input_hash = hash_obj(example.read_text(encoding="utf-8"))
+    return [_file_hash(ctx, "topic.json"), cfg, _file_hash_prompts(), mock_input_hash]
+
+
+def _validate_stage_inputs(ctx: Ctx) -> list[Any]:
+    cfg = {"rules": ctx.settings.script_rules, "llm": ctx.settings.get("llm")}
+    return [_file_hash(ctx, "script.json"), cfg]
+
+
+def _scene_plan_stage_inputs(ctx: Ctx) -> str | None:
+    return _file_hash(ctx, "script.validated.json")
 
 
 # ---------------------------------------------------------------- runner

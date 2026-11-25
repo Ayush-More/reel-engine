@@ -25,6 +25,13 @@ def test_generic_hook_is_rejected(project_json):
     assert "hook_generic" in codes(validate_script_rules(Script.model_validate(d)))
 
 
+def test_roles_must_follow_declared_order(project_json):
+    d = copy.deepcopy(project_json["script"])
+    d["beats"][1]["role"] = "ANALOGY"
+    d["beats"][2]["role"] = "PROBLEM"
+    assert "role_order" in codes(validate_script_rules(Script.model_validate(d)))
+
+
 def test_unsourced_factual_claim_is_an_error(project_json):
     d = copy.deepcopy(project_json["script"])
     d["claims"][1]["source_urls"] = []

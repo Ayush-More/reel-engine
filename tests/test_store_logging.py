@@ -17,10 +17,35 @@ def test_json_log_is_valid_json_and_redacted():
     assert "SECRET123" not in out["msg"] and out["level"] == "INFO"
 
 
+def test_cli_logging_is_written_to_file_without_polluting_output(tmp_path, capsys):
+    from reels.monitoring.logging import get_logger, job_id_var, setup_logging, stage_var
+
+    setup_logging(tmp_path)
+    job_id_var.set("job_logging")
+    stage_var.set("validate_script")
+    get_logger("test").info("stage complete")
+
+    captured = capsys.readouterr()
+    assert captured.out == "" and captured.err == ""
+    record = json.loads((tmp_path / "reels.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+    assert record["job_id"] == "job_logging"
+    assert record["stage"] == "validate_script"
+
+
 def test_atomic_json_roundtrip(tmp_path):
     jf = JobFiles(tmp_path, "job1")
     jf.write_json("a.json", {"x": 1})
     assert jf.read_json("a.json") == {"x": 1} and not list(jf.dir.glob("*.tmp"))
+
+
+def test_artefact_envelope_identifies_job_and_schema(tmp_path):
+    from reels.contracts.models import SCHEMA_VERSION
+
+    jf = JobFiles(tmp_path, "job_contract")
+    jf.write_artefact("script.json", {"topic_title": "Test"}, "test", "input-hash")
+    envelope = jf.read_json("script.json")
+    assert envelope["job_id"] == "job_contract"
+    assert envelope["schema_version"] == SCHEMA_VERSION
 
 
 def test_job_status_derives_from_latest_stage_rows(tmp_path):

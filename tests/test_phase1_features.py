@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from reels.contracts.models import Script, Topic
+from reels.scripting.script import generate_script
 from reels.storage.artifacts import JobFiles, hash_obj
 from reels.storage.db import JobStore, SUCCEEDED
 from reels.validation.script_rules import estimate_duration, validate_script_rules, has_errors, DEFAULT_WPS
@@ -25,11 +27,28 @@ class TestDurationEstimation:
         assert d > 0  # 7 words / 2.4 ≈ 2.9s
         assert abs(d - 7 / DEFAULT_WPS) < 0.01
 
-    def test_beat_duration_within_tolerance_no_warning(self, script):
+    def test_beat_durations_within_tolerance(self, script):
         """Example script beats are designed to be within 15% tolerance."""
         issues = validate_script_rules(script)
-        duration_warnings = [i for i in issues if i.code == "duration_estimate_beat" and i.severity == "error"]
-        assert len(duration_warnings) == 0  # these are warnings, not errors
+        assert not any(i.code == "duration_estimate_beat" for i in issues)
+
+    def test_out_of_tolerance_beat_is_reported(self, project_json):
+        data = json.loads(json.dumps(project_json["script"]))
+        data["beats"][0]["end"] = 2.0
+        for beat in data["beats"][1:]:
+            beat["start"] -= 2.2
+            beat["end"] -= 2.2
+        issues = validate_script_rules(Script.model_validate(data))
+        assert any(i.code == "duration_estimate_beat" and i.severity == "error" for i in issues)
+
+    def test_factual_claim_requires_valid_source_and_beat_coverage(self, project_json):
+        data = json.loads(json.dumps(project_json["script"]))
+        data["claims"][1]["source_urls"] = ["not-a-url"]
+        data["beats"][3]["claim_ids"] = []
+
+        issues = validate_script_rules(Script.model_validate(data))
+        codes = {issue.code for issue in issues if issue.severity == "error"}
+        assert {"claim_source_invalid", "claim_uncovered", "mechanism_unsourced"} <= codes
 
 
 class TestArtefactMetadata:
@@ -132,6 +151,7 @@ class TestPipelineWithArtefactEnvelopes:
         assert "created_at" in raw_script
         assert "producer" in raw_script
         assert raw_script["producer"] == "scripting.script"
+        assert raw_script["input_hash"] == ctx.store.last_run(jid, "generate_script")["input_hash"]
 
         # scene_plan.json should also be enveloped
         raw_plan = ctx.files.read_json("scene_plan.json")
@@ -141,3 +161,72 @@ class TestPipelineWithArtefactEnvelopes:
         # Pipeline still functions — plan data is valid
         plan_data = ctx.files.read_artefact_data("scene_plan.json")
         assert "scenes" in plan_data
+
+
+def test_broken_json_is_repaired_with_mocked_llm(project_json):
+    class SequenceLLM:
+        name = "sequence"
+
+        def __init__(self, outputs):
+            self.outputs = iter(outputs)
+            self.users = []
+            self.calls = 0
+
+        def complete_json(self, system, user):
+            self.calls += 1
+            self.users.append(user)
+            return next(self.outputs)
+
+    llm = SequenceLLM(["{broken json", json.dumps(project_json["script"])])
+    script, issues = generate_script(
+        llm,
+        Topic(id="topic_test", title="AI tokens"),
+        Path(__file__).resolve().parents[1] / "prompts",
+        {},
+        max_repairs=1,
+    )
+    assert llm.calls == 2
+    assert "Previous JSON" in llm.users[1]
+    assert script.topic_title
+    assert not has_errors(issues)
+
+
+def test_script_prompt_content_participates_in_input_hash(tmp_path, monkeypatch):
+    from reels import orchestrator
+
+    prompts = tmp_path / "prompts"
+    prompts.mkdir()
+    (prompts / "script.md").write_text("script prompt v1", encoding="utf-8")
+    (prompts / "repair.md").write_text("repair prompt", encoding="utf-8")
+    monkeypatch.setattr(orchestrator, "ROOT", tmp_path)
+    first_hash = orchestrator._file_hash_prompts()
+
+    (prompts / "script.md").write_text("script prompt v2", encoding="utf-8")
+    assert orchestrator._file_hash_prompts() != first_hash
+
+
+def test_mock_example_content_participates_in_input_hash(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from reels import orchestrator
+    from reels.config import Settings
+
+    (tmp_path / "prompts").mkdir()
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "prompts" / "script.md").write_text("script", encoding="utf-8")
+    (tmp_path / "prompts" / "repair.md").write_text("repair", encoding="utf-8")
+    example = tmp_path / "examples" / "tokens_reel.json"
+    example.write_text('{"script": 1}', encoding="utf-8")
+    monkeypatch.setattr(orchestrator, "ROOT", tmp_path)
+
+    files = JobFiles(tmp_path / "jobs", "job_hash")
+    files.write_json("topic.json", {"title": "Hash test"})
+    ctx = SimpleNamespace(
+        files=files,
+        settings=Settings(raw={"script": {}, "llm": {"provider": "mock"}}),
+        llm=SimpleNamespace(name="mock"),
+    )
+    first_hash = hash_obj(orchestrator._script_stage_inputs(ctx))
+
+    example.write_text('{"script": 2}', encoding="utf-8")
+    assert hash_obj(orchestrator._script_stage_inputs(ctx)) != first_hash

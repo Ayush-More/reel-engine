@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ..contracts.models import SCHEMA_VERSION
+
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -45,6 +47,8 @@ class JobFiles:
     def write_artefact(self, name: str, data: Any, producer: str, input_hash: str) -> Path:
         """Write an artefact with metadata envelope: created_at, producer, content_hash, data."""
         envelope = {
+            "schema_version": SCHEMA_VERSION,
+            "job_id": self.dir.name,
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "producer": producer,
             "content_hash": hash_obj(data),

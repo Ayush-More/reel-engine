@@ -40,6 +40,12 @@ def test_pipeline_phase1_end_to_end(tmp_path, monkeypatch):
     calls = ctx.llm.calls
     run_pipeline(ctx, until="plan_scenes")                      # resume: nothing re-runs
     assert ctx.llm.calls == calls
+    script_hash = ctx.store.last_run(jid, "generate_script")["input_hash"]
+
+    settings.raw["script"]["max_hook_words"] = 13
+    run_pipeline(ctx, until="plan_scenes")
+    assert ctx.llm.calls == calls + 1
+    assert ctx.store.last_run(jid, "generate_script")["input_hash"] != script_hash
 
     # going past Phase 1 must BLOCK, never report success
     summary = run_pipeline(ctx, until="publish_to_instagram")

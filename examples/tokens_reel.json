@@ -33,7 +33,7 @@
       {
         "id": "b01",
         "start": 0.0,
-        "end": 4.2,
+        "end": 5.0,
         "role": "HOOK",
         "narration": "AI tumhari line padhta hi nahi hai. Wo sirf numbers dekhta hai.",
         "keywords": [
@@ -66,8 +66,8 @@
       },
       {
         "id": "b02",
-        "start": 4.2,
-        "end": 10.0,
+        "start": 5.0,
+        "end": 11.7,
         "role": "PROBLEM",
         "narration": "Computer ko words nahi, sirf numbers samajh aate hain. Toh text numbers mein kaise badalta hai?",
         "keywords": [
@@ -91,8 +91,8 @@
       },
       {
         "id": "b03",
-        "start": 10.0,
-        "end": 18.0,
+        "start": 11.7,
+        "end": 22.5,
         "role": "ANALOGY",
         "narration": "Socho ek Lego ka dabba. Poora ghar ek piece mein nahi banta, chhote bricks jodne padte hain. AI bhi text ko chhote tukdon mein todta hai.",
         "keywords": [
@@ -129,8 +129,8 @@
       },
       {
         "id": "b04",
-        "start": 18.0,
-        "end": 28.0,
+        "start": 22.5,
+        "end": 30.8,
         "role": "MECHANISM",
         "narration": "Inhi tukdon ko kehte hain tokens. Ek token poora word ho sakta hai, word ka hissa, ya sirf ek comma.",
         "keywords": [
@@ -165,8 +165,8 @@
       },
       {
         "id": "b05",
-        "start": 28.0,
-        "end": 38.0,
+        "start": 30.8,
+        "end": 40.8,
         "role": "MECHANISM",
         "narration": "Har token ka ek number hota hai, jise kehte hain token ID. Model sirf yahi numbers dekhta hai, aur agla token predict karta hai.",
         "keywords": [
@@ -227,8 +227,8 @@
       },
       {
         "id": "b06",
-        "start": 38.0,
-        "end": 48.0,
+        "start": 40.8,
+        "end": 50.8,
         "role": "MECHANISM",
         "narration": "Aur tokenizer English ke liye jyada tuned hota hai. Isliye Hindi jaise languages mein aksar ek hi baat ke liye zyada tokens lagte hain.",
         "keywords": [
@@ -263,8 +263,8 @@
       },
       {
         "id": "b07",
-        "start": 48.0,
-        "end": 56.0,
+        "start": 50.8,
+        "end": 60.4,
         "role": "MECHANISM",
         "narration": "Aur tokens ka count hi decide karta hai ki AI ek baar mein kitna yaad rakh sakta hai. Isse kehte hain context window.",
         "keywords": [
@@ -297,8 +297,8 @@
       },
       {
         "id": "b08",
-        "start": 56.0,
-        "end": 63.0,
+        "start": 60.4,
+        "end": 66.2,
         "role": "TAKEAWAY",
         "narration": "Yaad rakhna: text se tokens, tokens se numbers. AI words nahi, tokens padhta hai.",
         "keywords": [
@@ -321,8 +321,8 @@
       },
       {
         "id": "b09",
-        "start": 63.0,
-        "end": 68.0,
+        "start": 66.2,
+        "end": 73.3,
         "role": "CTA",
         "narration": "Ye us dost ko bhejo jo kehta hai AI sab samajhta hai. Kal ka topic comment karo.",
         "keywords": [
@@ -382,7 +382,7 @@
         "verified": false
       }
     ],
-    "estimated_duration_s": 68.0
+    "estimated_duration_s": 73.3
   },
   "alignment_excerpt": {
     "aligner": "elevenlabs_forced_alignment (illustrative excerpt)",

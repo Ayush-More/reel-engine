@@ -5,7 +5,6 @@ import contextvars
 import json
 import logging
 import re
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,12 +45,14 @@ class JsonFormatter(logging.Formatter):
 def setup_logging(logs_dir: Path, level: int = logging.INFO) -> None:
     logs_dir.mkdir(parents=True, exist_ok=True)
     root = logging.getLogger()
-    root.handlers.clear()
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+        handler.close()
     root.setLevel(level)
     fmt = JsonFormatter()
-    for handler in (logging.StreamHandler(sys.stderr), logging.FileHandler(logs_dir / "reels.jsonl", encoding="utf-8")):
-        handler.setFormatter(fmt)
-        root.addHandler(handler)
+    handler = logging.FileHandler(logs_dir / "reels.jsonl", encoding="utf-8")
+    handler.setFormatter(fmt)
+    root.addHandler(handler)
 
 
 def get_logger(name: str) -> logging.Logger:
