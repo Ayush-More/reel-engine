@@ -1,0 +1,22 @@
+llm:
+  provider: mock            # mock | anthropic
+  model: claude-sonnet-5-5
+  max_repair_attempts: 2
+script:
+  min_duration_s: 55
+  max_duration_s: 80
+  max_words_per_second: 3.6
+  max_hook_words: 14
+  max_headline_words: 12
+  max_beat_seconds: 12
+  banned_openers: ["aaj hum", "today we", "is video mein", "hello dosto", "namaste dosto"]
+paths:
+  jobs_dir: jobs
+  db_path: data/reels.db
+  logs_dir: logs
+publishing:
+  mode: dry_run             # dry_run only in Phase 1
+  require_approval: true
+cost:
+  max_per_reel_usd: 1.50
+  max_per_day_usd: 4.00

@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "Animation": {
+      "additionalProperties": false,
+      "properties": {
+        "entrance": {
+          "default": "fade_up",
+          "title": "Entrance",
+          "type": "string"
+        },
+        "emphasis": {
+          "default": "none",
+          "title": "Emphasis",
+          "type": "string"
+        },
+        "exit": {
+          "default": "fade",
+          "title": "Exit",
+          "type": "string"
+        }
+      },
+      "title": "Animation",
+      "type": "object"
+    },
+    "Beat": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^b\\d{2}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "narration": {
+          "minLength": 3,
+          "title": "Narration",
+          "type": "string"
+        },
+        "keywords": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Keywords",
+          "type": "array"
+        },
+        "headline": {
+          "title": "Headline",
+          "type": "string"
+        },
+        "visual_concept": {
+          "title": "Visual Concept",
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/$defs/Template"
+        },
+        "props": {
+          "additionalProperties": true,
+          "title": "Props",
+          "type": "object"
+        },
+        "animation": {
+          "$ref": "#/$defs/Animation",
+          "default": {
+            "entrance": "fade_up",
+            "emphasis": "none",
+            "exit": "fade"
+          }
+        },
+        "caption_emphasis": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Caption Emphasis",
+          "type": "array"
+        },
+        "transition": {
+          "default": "cut",
+          "enum": [
+            "cut",
+            "glitch_cut",
+            "slide_up",
+            "slide_left",
+            "fade",
+            "zoom",
+            "wipe"
+          ],
+          "title": "Transition",
+          "type": "string"
+        },
+        "claim_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "start",
+        "end",
+        "role",
+        "narration",
+        "headline",
+        "visual_concept",
+        "template",
+        "props"
+      ],
+      "title": "Beat",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^c\\d+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "source_urls": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Urls",
+          "type": "array"
+        },
+        "is_analogy": {
+          "default": false,
+          "title": "Is Analogy",
+          "type": "boolean"
+        },
+        "illustrative": {
+          "default": false,
+          "title": "Illustrative",
+          "type": "boolean"
+        },
+        "verified": {
+          "default": false,
+          "title": "Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "thumbnail_headline": {
+          "title": "Thumbnail Headline",
+          "type": "string"
+        },
+        "instagram_caption": {
+          "maxLength": 2200,
+          "title": "Instagram Caption",
+          "type": "string"
+        },
+        "hashtags": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 15,
+          "minItems": 3,
+          "title": "Hashtags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "category",
+        "thumbnail_headline",
+        "instagram_caption",
+        "hashtags"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Role": {
+      "enum": [
+        "HOOK",
+        "PROBLEM",
+        "ANALOGY",
+        "MECHANISM",
+        "TAKEAWAY",
+        "CTA"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "Template": {
+      "enum": [
+        "hook_big_type",
+        "problem_explain",
+        "analogy",
+        "split_compare",
+        "before_after",
+        "flow_diagram",
+        "architecture",
+        "terminal_code",
+        "browser_ui",
+        "chat_ui",
+        "step_process",
+        "data_viz",
+        "counter",
+        "keyword_highlight",
+        "takeaway",
+        "cta",
+        "token_split"
+      ],
+      "title": "Template",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "topic_title": {
+      "title": "Topic Title",
+      "type": "string"
+    },
+    "target_audience": {
+      "title": "Target Audience",
+      "type": "string"
+    },
+    "hook_variants": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Hook Variants",
+      "type": "array"
+    },
+    "chosen_hook": {
+      "title": "Chosen Hook",
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "beats": {
+      "items": {
+        "$ref": "#/$defs/Beat"
+      },
+      "minItems": 5,
+      "title": "Beats",
+      "type": "array"
+    },
+    "claims": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Claims",
+      "type": "array"
+    },
+    "estimated_duration_s": {
+      "title": "Estimated Duration S",
+      "type": "number"
+    }
+  },
+  "required": [
+    "topic_title",
+    "target_audience",
+    "hook_variants",
+    "chosen_hook",
+    "meta",
+    "beats",
+    "estimated_duration_s"
+  ],
+  "title": "Script",
+  "type": "object"
+}

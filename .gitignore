@@ -1,0 +1,7 @@
+.env
+jobs/
+logs/
+data/reels.db
+__pycache__/
+*.pyc
+node_modules/

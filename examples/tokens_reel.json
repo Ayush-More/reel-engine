@@ -1,0 +1,466 @@
+{
+  "schema_version": "1.0",
+  "job_id": "job_tokens_demo",
+  "topic": {
+    "id": "topic_tokens",
+    "title": "What are AI Tokens and how do LLMs actually read text?",
+    "source": "manual"
+  },
+  "script": {
+    "topic_title": "What are AI Tokens and how do LLMs actually read text?",
+    "target_audience": "Indian students and developers curious about how ChatGPT-style models work",
+    "hook_variants": [
+      "AI tumhari line padhta hi nahi hai. Wo sirf numbers dekhta hai.",
+      "ChatGPT ko tumhari language nahi aati. Phir jawab kaise deta hai?",
+      "Ek word, teen tukde. AI aise padhta hai."
+    ],
+    "chosen_hook": "AI tumhari line padhta hi nahi hai. Wo sirf numbers dekhta hai.",
+    "meta": {
+      "title": "AI Tokens kya hote hain? LLM text kaise padhta hai",
+      "category": "AI Fundamentals",
+      "thumbnail_headline": "AI text nahi padhta",
+      "instagram_caption": "AI words nahi, tokens padhta hai. Text -> tokens -> numbers. Kisi dost ko bhejo jo sochta hai AI sab samajhta hai. Kal ka topic comment karo.",
+      "hashtags": [
+        "#AI",
+        "#LLM",
+        "#ChatGPT",
+        "#TechHindi",
+        "#MachineLearning",
+        "#Tokens"
+      ]
+    },
+    "beats": [
+      {
+        "id": "b01",
+        "start": 0.0,
+        "end": 4.2,
+        "role": "HOOK",
+        "narration": "AI tumhari line padhta hi nahi hai. Wo sirf numbers dekhta hai.",
+        "keywords": [
+          "AI",
+          "numbers"
+        ],
+        "headline": "AI text nahi padhta",
+        "visual_concept": "Sentence dissolves into a column of integers",
+        "template": "hook_big_type",
+        "props": {
+          "line1": "AI text",
+          "line2": "nahi padhta",
+          "accent_word": "nahi",
+          "morph_to": [
+            "7668",
+            "505",
+            "6923"
+          ]
+        },
+        "animation": {
+          "entrance": "type_on",
+          "emphasis": "glow",
+          "exit": "glitch"
+        },
+        "caption_emphasis": [
+          "numbers"
+        ],
+        "transition": "glitch_cut",
+        "claim_ids": []
+      },
+      {
+        "id": "b02",
+        "start": 4.2,
+        "end": 10.0,
+        "role": "PROBLEM",
+        "narration": "Computer ko words nahi, sirf numbers samajh aate hain. Toh text numbers mein kaise badalta hai?",
+        "keywords": [
+          "words",
+          "numbers"
+        ],
+        "headline": "Words -> numbers?",
+        "visual_concept": "Red-tinted card: a word on the left, a question mark where its number should be",
+        "template": "problem_explain",
+        "props": {
+          "headline": "Computer sirf numbers samajhta hai",
+          "bullets": [
+            "Text = letters",
+            "Computer = numbers",
+            "Bridge kahan hai?"
+          ],
+          "tone": "problem"
+        },
+        "transition": "slide_up",
+        "claim_ids": []
+      },
+      {
+        "id": "b03",
+        "start": 10.0,
+        "end": 18.0,
+        "role": "ANALOGY",
+        "narration": "Socho ek Lego ka dabba. Poora ghar ek piece mein nahi banta, chhote bricks jodne padte hain. AI bhi text ko chhote tukdon mein todta hai.",
+        "keywords": [
+          "Lego",
+          "bricks",
+          "tukdon"
+        ],
+        "headline": "Text = Lego bricks",
+        "visual_concept": "A sentence breaks into small coloured bricks that snap together",
+        "template": "analogy",
+        "props": {
+          "metaphor": "Lego",
+          "left_label": "Ghar (poora sentence)",
+          "right_label": "Chhote bricks",
+          "items": [
+            "Un",
+            "believ",
+            "able"
+          ]
+        },
+        "animation": {
+          "entrance": "snap_in",
+          "emphasis": "none",
+          "exit": "fade"
+        },
+        "caption_emphasis": [
+          "Lego",
+          "bricks"
+        ],
+        "transition": "slide_left",
+        "claim_ids": [
+          "c0"
+        ]
+      },
+      {
+        "id": "b04",
+        "start": 18.0,
+        "end": 28.0,
+        "role": "MECHANISM",
+        "narration": "Inhi tukdon ko kehte hain tokens. Ek token poora word ho sakta hai, word ka hissa, ya sirf ek comma.",
+        "keywords": [
+          "tokens",
+          "word",
+          "comma"
+        ],
+        "headline": "Text -> Tokens",
+        "visual_concept": "Example sentence split into coloured chips with boundaries and a live token count",
+        "template": "token_split",
+        "props": {
+          "sentence": "Unbelievable results, honestly.",
+          "tokens": [
+            "Un",
+            "believ",
+            "able",
+            " results",
+            ",",
+            " honestly",
+            "."
+          ],
+          "illustrative": true,
+          "show_count": true
+        },
+        "caption_emphasis": [
+          "tokens"
+        ],
+        "transition": "slide_up",
+        "claim_ids": [
+          "c1"
+        ]
+      },
+      {
+        "id": "b05",
+        "start": 28.0,
+        "end": 38.0,
+        "role": "MECHANISM",
+        "narration": "Har token ka ek number hota hai, jise kehte hain token ID. Model sirf yahi numbers dekhta hai, aur agla token predict karta hai.",
+        "keywords": [
+          "token ID",
+          "predict"
+        ],
+        "headline": "Token -> ID -> Prediction",
+        "visual_concept": "Three-step flow: text, tokens, IDs, then an arrow to the next-token prediction",
+        "template": "flow_diagram",
+        "props": {
+          "nodes": [
+            {
+              "id": "t",
+              "label": "Text",
+              "color": "blue"
+            },
+            {
+              "id": "k",
+              "label": "Tokens",
+              "color": "green"
+            },
+            {
+              "id": "i",
+              "label": "Token IDs",
+              "color": "purple"
+            },
+            {
+              "id": "m",
+              "label": "Model",
+              "color": "amber"
+            }
+          ],
+          "edges": [
+            {
+              "src": "t",
+              "dst": "k",
+              "label": "tokenizer"
+            },
+            {
+              "src": "k",
+              "dst": "i"
+            },
+            {
+              "src": "i",
+              "dst": "m",
+              "label": "next token?"
+            }
+          ],
+          "direction": "vertical"
+        },
+        "caption_emphasis": [
+          "token ID"
+        ],
+        "transition": "wipe",
+        "claim_ids": [
+          "c2"
+        ]
+      },
+      {
+        "id": "b06",
+        "start": 38.0,
+        "end": 48.0,
+        "role": "MECHANISM",
+        "narration": "Aur tokenizer English ke liye jyada tuned hota hai. Isliye Hindi jaise languages mein aksar ek hi baat ke liye zyada tokens lagte hain.",
+        "keywords": [
+          "English",
+          "Hindi",
+          "tokens"
+        ],
+        "headline": "Same baat, zyada tokens",
+        "visual_concept": "Split screen: the same sentence in English and Hindi with different chip counts",
+        "template": "split_compare",
+        "props": {
+          "left": {
+            "title": "English",
+            "lines": [
+              "Fewer tokens (usually)"
+            ],
+            "color": "green"
+          },
+          "right": {
+            "title": "Hindi",
+            "lines": [
+              "More tokens (often)"
+            ],
+            "color": "amber"
+          },
+          "verdict": "Counts depend on the tokenizer"
+        },
+        "transition": "fade",
+        "claim_ids": [
+          "c3"
+        ]
+      },
+      {
+        "id": "b07",
+        "start": 48.0,
+        "end": 56.0,
+        "role": "MECHANISM",
+        "narration": "Aur tokens ka count hi decide karta hai ki AI ek baar mein kitna yaad rakh sakta hai. Isse kehte hain context window.",
+        "keywords": [
+          "context window",
+          "count"
+        ],
+        "headline": "Context window",
+        "visual_concept": "A meter filling with token chips until it is full",
+        "template": "data_viz",
+        "props": {
+          "kind": "meter",
+          "title": "Context window",
+          "series": [
+            {
+              "label": "used",
+              "value": 78
+            },
+            {
+              "label": "free",
+              "value": 22
+            }
+          ],
+          "unit": "%",
+          "illustrative": true
+        },
+        "transition": "zoom",
+        "claim_ids": [
+          "c4"
+        ]
+      },
+      {
+        "id": "b08",
+        "start": 56.0,
+        "end": 63.0,
+        "role": "TAKEAWAY",
+        "narration": "Yaad rakhna: text se tokens, tokens se numbers. AI words nahi, tokens padhta hai.",
+        "keywords": [
+          "tokens",
+          "numbers"
+        ],
+        "headline": "Text -> Tokens -> Numbers",
+        "visual_concept": "Amber recap card with the three steps ticking in",
+        "template": "takeaway",
+        "props": {
+          "title": "Yaad rakhna",
+          "items": [
+            "Text -> tokens",
+            "Tokens -> numbers",
+            "AI tokens padhta hai"
+          ]
+        },
+        "transition": "slide_up",
+        "claim_ids": []
+      },
+      {
+        "id": "b09",
+        "start": 63.0,
+        "end": 68.0,
+        "role": "CTA",
+        "narration": "Ye us dost ko bhejo jo kehta hai AI sab samajhta hai. Kal ka topic comment karo.",
+        "keywords": [
+          "dost",
+          "comment"
+        ],
+        "headline": "Dost ko bhejo",
+        "visual_concept": "Chat thread with a Send button pulsing",
+        "template": "cta",
+        "props": {
+          "primary": "Us dost ko bhejo",
+          "secondary": "Kal ka topic comment karo",
+          "style": "share"
+        },
+        "transition": "fade",
+        "claim_ids": []
+      }
+    ],
+    "claims": [
+      {
+        "id": "c0",
+        "text": "Lego bricks combine into larger structures (analogy for tokens combining into text).",
+        "source_urls": [],
+        "is_analogy": true
+      },
+      {
+        "id": "c1",
+        "text": "LLM tokenizers split text into tokens that can be whole words, parts of words, or punctuation.",
+        "source_urls": [
+          "https://github.com/openai/tiktoken",
+          "https://platform.openai.com/tokenizer"
+        ],
+        "verified": false
+      },
+      {
+        "id": "c2",
+        "text": "Models operate on integer token IDs, not on raw characters, and predict the next token.",
+        "source_urls": [
+          "https://github.com/openai/tiktoken"
+        ],
+        "verified": false
+      },
+      {
+        "id": "c3",
+        "text": "Tokenizers trained mostly on English text often need more tokens for the same content in other languages, including Hindi.",
+        "source_urls": [
+          "https://arxiv.org/abs/2305.15425"
+        ],
+        "verified": false
+      },
+      {
+        "id": "c4",
+        "text": "The context window is the maximum number of tokens a model can consider at once.",
+        "source_urls": [
+          "https://platform.openai.com/tokenizer"
+        ],
+        "verified": false
+      }
+    ],
+    "estimated_duration_s": 68.0
+  },
+  "alignment_excerpt": {
+    "aligner": "elevenlabs_forced_alignment (illustrative excerpt)",
+    "audio_duration_s": 68.4,
+    "words": [
+      {
+        "text": "AI",
+        "start": 0.1,
+        "end": 0.35,
+        "confidence": 0.97
+      },
+      {
+        "text": "tumhari",
+        "start": 0.38,
+        "end": 0.8,
+        "confidence": 0.97
+      },
+      {
+        "text": "line",
+        "start": 0.82,
+        "end": 1.1,
+        "confidence": 0.97
+      },
+      {
+        "text": "padhta",
+        "start": 1.14,
+        "end": 1.55,
+        "confidence": 0.97
+      },
+      {
+        "text": "hi",
+        "start": 1.57,
+        "end": 1.7,
+        "confidence": 0.97
+      },
+      {
+        "text": "nahi",
+        "start": 1.72,
+        "end": 2.05,
+        "confidence": 0.97
+      },
+      {
+        "text": "hai.",
+        "start": 2.08,
+        "end": 2.45,
+        "confidence": 0.97
+      },
+      {
+        "text": "Wo",
+        "start": 2.8,
+        "end": 3.0,
+        "confidence": 0.97
+      },
+      {
+        "text": "sirf",
+        "start": 3.02,
+        "end": 3.3,
+        "confidence": 0.97
+      },
+      {
+        "text": "numbers",
+        "start": 3.33,
+        "end": 3.8,
+        "confidence": 0.97
+      },
+      {
+        "text": "dekhta",
+        "start": 3.84,
+        "end": 4.2,
+        "confidence": 0.97
+      },
+      {
+        "text": "hai.",
+        "start": 4.22,
+        "end": 4.6,
+        "confidence": 0.97
+      }
+    ],
+    "coverage": 1.0
+  }
+}
