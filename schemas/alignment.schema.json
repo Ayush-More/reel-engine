@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "WordTiming": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end"
+      ],
+      "title": "WordTiming",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "aligner": {
+      "title": "Aligner",
+      "type": "string"
+    },
+    "audio_duration_s": {
+      "title": "Audio Duration S",
+      "type": "number"
+    },
+    "words": {
+      "items": {
+        "$ref": "#/$defs/WordTiming"
+      },
+      "title": "Words",
+      "type": "array"
+    },
+    "coverage": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Coverage",
+      "type": "number"
+    }
+  },
+  "required": [
+    "aligner",
+    "audio_duration_s",
+    "words",
+    "coverage"
+  ],
+  "title": "Alignment",
+  "type": "object"
+}

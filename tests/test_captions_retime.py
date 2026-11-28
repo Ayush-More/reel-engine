@@ -30,8 +30,8 @@ def test_retime_uses_audio_as_clock():
     beats = [NS(id="b01", narration="ek do teen"), NS(id="b02", narration="chaar paanch")]
     words = [W("ek", 0, .4), W("do", .4, .8), W("teen", .8, 1.2), W("chaar", 1.6, 2.0), W("paanch", 2.0, 2.6)]
     out = retime_beats(beats, words, audio_duration=2.6)
-    assert out[0] == ("b01", 0.0, 1.2)
-    assert out[1][1] == 1.2 and out[1][2] == pytest.approx(2.85)   # contiguous, tail padded
+    assert out[0] == ("b01", 0.0, 1.4)
+    assert out[1][1] == 1.4 and out[1][2] == pytest.approx(2.7)   # contiguous, <=150ms tail
 
 
 def test_retime_refuses_word_count_mismatch():

@@ -21,7 +21,7 @@ from .contracts.models import Script, Topic
 from .monitoring.logging import get_logger, job_id_var, stage_var
 from .scripting.llm_client import LLMClient
 from .scripting.script import ScriptGenerationError, generate_script
-from .storage.artifacts import JobFiles, hash_obj
+from .storage.artifacts import JobFiles, hash_obj, sha256_bytes
 from .storage.db import BLOCKED, FAILED, SUCCEEDED, JobStore
 from .validation.script_rules import has_errors, validate_script_rules
 
@@ -49,6 +49,7 @@ class Ctx:
     files: JobFiles
     store: JobStore
     llm: LLMClient
+    voice_provider: Any = None
 
 
 @dataclass
@@ -65,7 +66,7 @@ def make_job_id(title: str) -> str:
 
 
 def _file_hash(ctx: Ctx, name: str) -> str | None:
-    return hash_obj(ctx.files.path(name).read_text(encoding="utf-8")) if ctx.files.exists(name) else None
+    return sha256_bytes(ctx.files.path(name).read_bytes()) if ctx.files.exists(name) else None
 
 
 # ---------------------------------------------------------------- stage functions
@@ -147,6 +148,207 @@ def plan_scenes(ctx: Ctx) -> dict[str, Any]:
     return {}
 
 
+def generate_voiceover(ctx: Ctx) -> dict[str, Any]:
+    from .contracts.models import Script, VoiceMetadata
+    from .voice.pronunciation import apply_overrides, load_overrides
+    from .voice.provider import MockVoiceProvider, build_voice_provider
+
+    script = Script.model_validate(ctx.files.read_artefact_data("script.validated.json"))
+    override_path = ROOT / "config" / "pronunciation.yaml"
+    overrides = load_overrides(override_path)
+    spoken_beats = [
+        {"beat_id": beat.id, "narration": apply_overrides(beat.narration, overrides)}
+        for beat in script.beats
+    ]
+    spoken_text = " ".join(beat["narration"] for beat in spoken_beats)
+    if ctx.voice_provider is None:
+        ctx.voice_provider = build_voice_provider(ctx.settings)
+    provider = ctx.voice_provider
+    output_path = ctx.files.path("voice.wav" if isinstance(provider, MockVoiceProvider) else "voice.mp3")
+    cache_dir = ROOT / "data" / "voice_cache"
+    result = provider.synthesize(
+        spoken_text,
+        output_path,
+        cache_dir,
+        target_duration_s=script.estimated_duration_s,
+        voice_id=ctx.settings.get("voice.voice_id"),
+    )
+    target_duration = script.estimated_duration_s
+    max_deviation = float(ctx.settings.get("voice.max_duration_deviation", 0.08))
+    deviation = abs(result.duration_s - target_duration) / target_duration
+    if deviation > max_deviation:
+        raise ValueError(
+            f"voice duration {result.duration_s:.2f}s differs from plan {target_duration:.2f}s "
+            f"by {deviation:.1%} (limit {max_deviation:.0%})"
+        )
+    max_silence = float(ctx.settings.get("voice.max_silence_s", 1.2))
+    if result.longest_silence_s > max_silence:
+        raise ValueError(f"voice contains {result.longest_silence_s:.2f}s silence (limit {max_silence:.2f}s)")
+    voice_id = ctx.settings.get("voice.voice_id")
+    metadata = VoiceMetadata(
+        provider=result.provider,
+        model=result.model,
+        voice_id=voice_id,
+        text_hash=result.text_hash,
+        audio_path=str(result.path.resolve()),
+        duration_s=result.duration_s,
+        longest_silence_s=result.longest_silence_s,
+        mean_db=result.mean_db,
+        cache_hit=result.cache_hit,
+    )
+    ctx.files.write_json("spoken_script.json", {"beats": spoken_beats})
+    ctx.files.write_artefact(
+        "voice.meta.json",
+        metadata.model_dump(mode="json"),
+        producer=f"voice.{result.provider}",
+        input_hash=hash_obj(_voice_stage_inputs(ctx)),
+    )
+    return {}
+
+
+def align_audio(ctx: Ctx) -> dict[str, Any]:
+    from .alignment.captions import group_captions
+    from .alignment.providers import LocalFallbackAligner, align_with_fallback, build_aligner
+    from .alignment.retime import retime_beats
+    from .contracts.models import CaptionTrack, Script
+
+    script = Script.model_validate(ctx.files.read_artefact_data("script.validated.json"))
+    spoken = ctx.files.read_json("spoken_script.json")["beats"]
+    spoken_by_id = {beat["beat_id"]: beat["narration"] for beat in spoken}
+    beats = [
+        beat.model_copy(update={"narration": spoken_by_id[beat.id]})
+        for beat in script.beats
+    ]
+    voice = ctx.files.read_artefact_data("voice.meta.json")
+    audio_path = Path(voice["audio_path"])
+    primary = build_aligner(ctx.settings)
+    fallback = LocalFallbackAligner()
+    alignment = align_with_fallback(
+        primary, fallback, audio_path, beats,
+        min_coverage=float(ctx.settings.get("alignment.min_coverage", 0.98)),
+    )
+    if alignment.coverage < 0.98:
+        raise ValueError(f"word alignment coverage {alignment.coverage:.1%} is below 98%")
+    retimed = retime_beats(beats, alignment.words, alignment.audio_duration_s)
+    retimed_data = [
+        {"beat_id": beat_id, "start": start, "end": end}
+        for beat_id, start, end in retimed
+    ]
+    segments = group_captions(
+        alignment.words,
+        max_words=int(ctx.settings.get("captions.max_words", 4)),
+        max_chars=int(ctx.settings.get("captions.max_chars", 26)),
+        max_seconds=float(ctx.settings.get("captions.max_seconds", 2.0)),
+    )
+    caption_track = CaptionTrack.model_validate({
+        "language": "roman_hinglish",
+        "segments": [
+            {
+                "start": segment.start,
+                "end": segment.end,
+                "words": [word.__dict__ for word in segment.words],
+            }
+            for segment in segments
+        ],
+    })
+    input_hash = hash_obj(_alignment_stage_inputs(ctx))
+    ctx.files.write_artefact("alignment.json", alignment.model_dump(mode="json"),
+                             producer=f"alignment.{alignment.aligner}", input_hash=input_hash)
+    ctx.files.write_artefact("retimed_beats.json", retimed_data,
+                             producer="alignment.retime", input_hash=input_hash)
+    ctx.files.write_artefact("captions.json", caption_track.model_dump(mode="json"),
+                             producer="alignment.captions", input_hash=input_hash)
+    return {}
+
+
+def generate_visual_assets(ctx: Ctx) -> dict[str, Any]:
+    from .contracts.models import Script
+    from .visuals.planner import build_render_props
+
+    script = Script.model_validate(ctx.files.read_artefact_data("script.validated.json"))
+    voice = ctx.files.read_artefact_data("voice.meta.json")
+    build_render_props(
+        ctx.job_id,
+        script,
+        ctx.files.read_artefact_data("retimed_beats.json"),
+        ctx.files.read_artefact_data("captions.json"),
+        Path(voice["audio_path"]),
+        ctx.files,
+        assets=[],
+    )
+    return {}
+
+
+def render_video_stage(ctx: Ctx) -> dict[str, Any]:
+    import subprocess
+
+    from .rendering.mock import render_fixture
+    from .rendering.remotion import render_video
+
+    props = ctx.files.read_artefact_data("render_props.json")
+    mode = ctx.settings.get("rendering.mode", "mock")
+    timeout = int(ctx.settings.get("rendering.timeout_s", 900))
+    if mode not in ("mock", "remotion"):
+        raise ValueError(f"unknown rendering.mode: {mode}")
+    for attempt in range(2):
+        try:
+            if mode == "mock":
+                render_fixture(props, ctx.files.path("raw.mp4"), ctx.files.path("render_fixture.png"),
+                               timeout_s=timeout)
+            else:
+                render_video(
+                    ctx.files.path("render_props.json"),
+                    ctx.files.path("raw.mp4"),
+                    timeout_s=timeout,
+                    concurrency=1 if attempt else None,
+                )
+            break
+        except (RuntimeError, subprocess.SubprocessError) as exc:
+            if attempt:
+                raise
+            if ctx.files.path("raw.mp4").exists():
+                ctx.files.path("raw.mp4").unlink()
+            log.warning("render failed; retrying with lower concurrency",
+                        extra={"data": {"attempt": 1, "error": str(exc)[:500]}})
+    return {}
+
+
+def postprocess_video_stage(ctx: Ctx) -> dict[str, Any]:
+    from .rendering.ffmpeg_post import postprocess_video
+
+    postprocess_video(
+        ctx.files.path("raw.mp4"),
+        ctx.files.path("final.mp4"),
+        timeout_s=int(ctx.settings.get("rendering.timeout_s", 900)),
+        integrated_lufs=float(ctx.settings.get("rendering.loudness_lufs", -14)),
+        true_peak_dbtp=float(ctx.settings.get("rendering.true_peak_dbtp", -1)),
+    )
+    return {}
+
+
+def generate_thumbnail_stage(ctx: Ctx) -> dict[str, Any]:
+    from .contracts.models import Script
+    from .thumbnails.cover import generate_cover
+
+    script = Script.model_validate(ctx.files.read_artefact_data("script.validated.json"))
+    generate_cover(script, ctx.files.path("cover.jpg"), ctx.files.path("final.mp4"))
+    return {}
+
+
+def validate_final_video_stage(ctx: Ctx) -> dict[str, Any]:
+    from .contracts.models import Script
+    from .qc.report import run_qc
+
+    script = Script.model_validate(ctx.files.read_artefact_data("script.validated.json"))
+    report = run_qc(ctx.files, script)
+    if report.verdict != "pass":
+        failed = [check.name for check in report.checks if not check.passed]
+        raise ValueError(
+            f"QC hard gates failed ({', '.join(failed)}); quality score {report.score:.1f}/100"
+        )
+    return {}
+
+
 def _not_yet(phase: int, what: str) -> Callable[[Ctx], dict[str, Any]]:
     def fn(ctx: Ctx) -> dict[str, Any]:
         raise NotImplementedInPhase(f"Phase {phase}: {what}")
@@ -162,12 +364,13 @@ def build_stages() -> list[Stage]:
               _script_stage_inputs),
         Stage("validate_script", validate_script_stage, _validate_stage_inputs),
         Stage("plan_scenes", plan_scenes, _scene_plan_stage_inputs),
-        Stage("generate_voiceover", _not_yet(2, "ElevenLabs TTS"), lambda c: "-", 2),
-        Stage("align_audio", _not_yet(2, "forced alignment"), lambda c: "-", 2),
-        Stage("generate_visual_assets", _not_yet(2, "render_props + assets"), lambda c: "-", 2),
-        Stage("render_video", _not_yet(2, "Remotion render"), lambda c: "-", 2),
-        Stage("generate_thumbnail", _not_yet(2, "cover generation"), lambda c: "-", 2),
-        Stage("validate_final_video", _not_yet(2, "QC gates"), lambda c: "-", 2),
+        Stage("generate_voiceover", generate_voiceover, _voice_stage_inputs, 2),
+        Stage("align_audio", align_audio, _alignment_stage_inputs, 2),
+        Stage("generate_visual_assets", generate_visual_assets, _visual_stage_inputs, 2),
+        Stage("render_video", render_video_stage, _render_stage_inputs, 2),
+        Stage("postprocess_video", postprocess_video_stage, _postprocess_stage_inputs, 2),
+        Stage("generate_thumbnail", generate_thumbnail_stage, _thumbnail_stage_inputs, 2),
+        Stage("validate_final_video", validate_final_video_stage, _qc_stage_inputs, 2),
         Stage("request_manual_approval", _not_yet(3, "approval queue UI"), lambda c: "-", 3),
         Stage("publish_to_instagram", _not_yet(3, "Graph API publisher"), lambda c: "-", 3),
     ]
@@ -175,6 +378,14 @@ def build_stages() -> list[Stage]:
 
 def _file_hash_prompts() -> str:
     return hash_obj([(ROOT / "prompts" / n).read_text(encoding="utf-8") for n in ("script.md", "repair.md")])
+
+
+def _file_tree_hash(path: Path, pattern: str) -> str:
+    files = sorted(path.rglob(pattern))
+    return hash_obj([
+        (file.relative_to(path).as_posix(), sha256_bytes(file.read_bytes()))
+        for file in files if file.is_file()
+    ])
 
 
 def _script_stage_inputs(ctx: Ctx) -> list[Any]:
@@ -193,6 +404,67 @@ def _validate_stage_inputs(ctx: Ctx) -> list[Any]:
 
 def _scene_plan_stage_inputs(ctx: Ctx) -> str | None:
     return _file_hash(ctx, "script.validated.json")
+
+
+def _voice_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [
+        _file_hash(ctx, "script.validated.json"),
+        ctx.settings.get("voice"),
+        hash_obj((ROOT / "config" / "pronunciation.yaml").read_text(encoding="utf-8")),
+    ]
+
+
+def _alignment_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [
+        _file_hash(ctx, "voice.meta.json"),
+        _file_hash(ctx, "spoken_script.json"),
+        ctx.settings.get("alignment"),
+        ctx.settings.get("captions"),
+    ]
+
+
+def _visual_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [
+        _file_hash(ctx, "script.validated.json"),
+        _file_hash(ctx, "retimed_beats.json"),
+        _file_hash(ctx, "captions.json"),
+        _file_hash(ctx, "voice.meta.json"),
+    ]
+
+
+def _render_stage_inputs(ctx: Ctx) -> list[Any]:
+    props = ctx.files.read_artefact_data("render_props.json") if ctx.files.exists("render_props.json") else None
+    audio_path = Path(props["audio_path"]) if props else None
+    audio_hash = hash_obj(audio_path.read_bytes()) if audio_path and audio_path.is_file() else None
+    mode = ctx.settings.get("rendering.mode", "mock")
+    renderer_hash = (
+        [
+            _file_tree_hash(ROOT / "renderer", "*.tsx"),
+            _file_tree_hash(ROOT / "renderer", "*.ts"),
+            sha256_bytes((ROOT / "renderer" / "package.json").read_bytes()),
+        ]
+        if mode == "remotion" else None
+    )
+    return [_file_hash(ctx, "render_props.json"), audio_hash, mode, renderer_hash]
+
+
+def _postprocess_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [_file_hash(ctx, "raw.mp4"), ctx.settings.get("rendering")]
+
+
+def _thumbnail_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [_file_hash(ctx, "final.mp4"), _file_hash(ctx, "script.validated.json")]
+
+
+def _qc_stage_inputs(ctx: Ctx) -> list[Any]:
+    return [
+        _file_hash(ctx, "final.mp4"),
+        _file_hash(ctx, "cover.jpg"),
+        _file_hash(ctx, "render_props.json"),
+        _file_hash(ctx, "alignment.json"),
+        _file_hash(ctx, "captions.json"),
+        _file_hash(ctx, "layout_report.json"),
+    ]
 
 
 # ---------------------------------------------------------------- runner
@@ -242,7 +514,7 @@ def run_pipeline(ctx: Ctx, until: str = "plan_scenes", force: bool = False) -> d
 
 def job_status(ctx: Ctx) -> str:
     summary = ctx.store.stage_summary(ctx.job_id)
-    names = [s.name for s in build_stages()]
+    names = [s.name for s in build_stages() if s.phase <= 2]
     if any(v == FAILED for v in summary.values()):
         return "failed"
     if any(v == BLOCKED for v in summary.values()):

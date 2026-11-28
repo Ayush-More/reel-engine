@@ -1,0 +1,82 @@
+{
+  "$defs": {
+    "CaptionSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "words": {
+          "items": {
+            "$ref": "#/$defs/CaptionWord"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Words",
+          "type": "array"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "words"
+      ],
+      "title": "CaptionSegment",
+      "type": "object"
+    },
+    "CaptionWord": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "number"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end"
+      ],
+      "title": "CaptionWord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "language": {
+      "const": "roman_hinglish",
+      "default": "roman_hinglish",
+      "title": "Language",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/CaptionSegment"
+      },
+      "title": "Segments",
+      "type": "array"
+    }
+  },
+  "required": [
+    "segments"
+  ],
+  "title": "CaptionTrack",
+  "type": "object"
+}

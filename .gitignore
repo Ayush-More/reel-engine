@@ -5,3 +5,5 @@ data/reels.db
 __pycache__/
 *.pyc
 node_modules/
+*.egg-info/
+data/voice_cache/

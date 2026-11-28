@@ -319,6 +319,84 @@ class Alignment(Strict):
     words: list[WordTiming]
     coverage: float = Field(ge=0, le=1)
 
+    @model_validator(mode="after")
+    def monotonic_words(self) -> "Alignment":
+        previous_end = 0.0
+        for word in self.words:
+            if word.start < previous_end:
+                raise ValueError("alignment word timings must be monotonic and non-overlapping")
+            if word.end > self.audio_duration_s + 0.15:
+                raise ValueError("word timing exceeds audio duration tolerance")
+            previous_end = word.end
+        return self
+
+
+class CaptionWord(Strict):
+    text: str
+    start: float = Field(ge=0)
+    end: float = Field(gt=0)
+
+
+class CaptionSegment(Strict):
+    start: float = Field(ge=0)
+    end: float = Field(gt=0)
+    words: list[CaptionWord] = Field(min_length=1, max_length=4)
+
+
+class CaptionTrack(Strict):
+    language: Literal["roman_hinglish"] = "roman_hinglish"
+    segments: list[CaptionSegment]
+
+
+class VoiceMetadata(Strict):
+    provider: str
+    model: str
+    voice_id: str | None = None
+    text_hash: str
+    audio_path: str
+    duration_s: float = Field(gt=0)
+    longest_silence_s: float = Field(ge=0)
+    mean_db: float
+    cache_hit: bool
+
+
+class RenderScene(Strict):
+    beat_id: str
+    template: Template
+    from_frame: int = Field(ge=0)
+    duration_frames: int = Field(gt=0)
+    headline: str
+    props: dict[str, Any]
+    transition: Transition = "cut"
+
+
+class RenderProps(Strict):
+    schema_version: str = SCHEMA_VERSION
+    job_id: str
+    fps: Literal[30] = 30
+    size: tuple[Literal[1080], Literal[1920]] = (1080, 1920)
+    audio_path: str
+    scenes: list[RenderScene] = Field(min_length=1)
+    captions: CaptionTrack
+    assets: list[str] = []
+
+
+class LayoutBox(Strict):
+    name: str
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    zone: Literal["chrome", "headline", "stage", "caption"]
+
+
+class LayoutReport(Strict):
+    width: Literal[1080] = 1080
+    height: Literal[1920] = 1920
+    safe_area_passed: bool
+    boxes: list[LayoutBox]
+    violations: list[str] = []
+
 
 class Topic(Strict):
     id: str
@@ -346,9 +424,12 @@ class QCCheck(Strict):
 
 
 class QCReport(Strict):
+    job_id: str | None = None
+    schema_version: str = SCHEMA_VERSION
     checks: list[QCCheck]
     verdict: Literal["pass", "fail"]
-    score: float | None = None
+    score: float = Field(ge=0, le=100)
+    quality_dimensions: dict[str, float] = {}
 
 
 class PublishPackage(Strict):

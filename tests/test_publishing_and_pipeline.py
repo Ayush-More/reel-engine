@@ -47,7 +47,7 @@ def test_pipeline_phase1_end_to_end(tmp_path, monkeypatch):
     assert ctx.llm.calls == calls + 1
     assert ctx.store.last_run(jid, "generate_script")["input_hash"] != script_hash
 
-    # going past Phase 1 must BLOCK, never report success
-    summary = run_pipeline(ctx, until="publish_to_instagram")
-    assert summary["generate_voiceover"] == "blocked"
-    assert job_status(ctx) == "blocked_awaiting_later_phase"
+    summary = run_pipeline(ctx, until="generate_voiceover")
+    assert summary["generate_voiceover"] == "succeeded"
+    assert ctx.files.exists("voice.meta.json")
+    assert job_status(ctx) == "in_progress"

@@ -17,6 +17,30 @@ paths:
 publishing:
   mode: dry_run             # dry_run only in Phase 1
   require_approval: true
+voice:
+  provider: mock             # mock | elevenlabs
+  model: eleven_multilingual_v2
+  output_format: mp3_44100_128
+  retries: 4
+  timeout_s: 120
+  max_duration_deviation: 0.08
+  max_silence_s: 1.2
+alignment:
+  provider: mock             # mock | elevenlabs
+  min_coverage: 0.98
+  timeout_s: 120
+captions:
+  max_words: 4
+  max_chars: 26
+  max_seconds: 2.4
+rendering:
+  mode: mock                 # mock | remotion
+  fps: 30
+  width: 1080
+  height: 1920
+  timeout_s: 900
+  loudness_lufs: -14
+  true_peak_dbtp: -1
 cost:
   max_per_reel_usd: 1.50
   max_per_day_usd: 4.00

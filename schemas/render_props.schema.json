@@ -1,0 +1,231 @@
+{
+  "$defs": {
+    "CaptionSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "number"
+        },
+        "words": {
+          "items": {
+            "$ref": "#/$defs/CaptionWord"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Words",
+          "type": "array"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "words"
+      ],
+      "title": "CaptionSegment",
+      "type": "object"
+    },
+    "CaptionTrack": {
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "const": "roman_hinglish",
+          "default": "roman_hinglish",
+          "title": "Language",
+          "type": "string"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/CaptionSegment"
+          },
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "title": "CaptionTrack",
+      "type": "object"
+    },
+    "CaptionWord": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "number"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end"
+      ],
+      "title": "CaptionWord",
+      "type": "object"
+    },
+    "RenderScene": {
+      "additionalProperties": false,
+      "properties": {
+        "beat_id": {
+          "title": "Beat Id",
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/$defs/Template"
+        },
+        "from_frame": {
+          "minimum": 0,
+          "title": "From Frame",
+          "type": "integer"
+        },
+        "duration_frames": {
+          "exclusiveMinimum": 0,
+          "title": "Duration Frames",
+          "type": "integer"
+        },
+        "headline": {
+          "title": "Headline",
+          "type": "string"
+        },
+        "props": {
+          "additionalProperties": true,
+          "title": "Props",
+          "type": "object"
+        },
+        "transition": {
+          "default": "cut",
+          "enum": [
+            "cut",
+            "glitch_cut",
+            "slide_up",
+            "slide_left",
+            "fade",
+            "zoom",
+            "wipe"
+          ],
+          "title": "Transition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "beat_id",
+        "template",
+        "from_frame",
+        "duration_frames",
+        "headline",
+        "props"
+      ],
+      "title": "RenderScene",
+      "type": "object"
+    },
+    "Template": {
+      "enum": [
+        "hook_big_type",
+        "problem_explain",
+        "analogy",
+        "split_compare",
+        "before_after",
+        "flow_diagram",
+        "architecture",
+        "terminal_code",
+        "browser_ui",
+        "chat_ui",
+        "step_process",
+        "data_viz",
+        "counter",
+        "keyword_highlight",
+        "takeaway",
+        "cta",
+        "token_split"
+      ],
+      "title": "Template",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "fps": {
+      "const": 30,
+      "default": 30,
+      "title": "Fps",
+      "type": "integer"
+    },
+    "size": {
+      "default": [
+        1080,
+        1920
+      ],
+      "maxItems": 2,
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "const": 1080,
+          "type": "integer"
+        },
+        {
+          "const": 1920,
+          "type": "integer"
+        }
+      ],
+      "title": "Size",
+      "type": "array"
+    },
+    "audio_path": {
+      "title": "Audio Path",
+      "type": "string"
+    },
+    "scenes": {
+      "items": {
+        "$ref": "#/$defs/RenderScene"
+      },
+      "minItems": 1,
+      "title": "Scenes",
+      "type": "array"
+    },
+    "captions": {
+      "$ref": "#/$defs/CaptionTrack"
+    },
+    "assets": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Assets",
+      "type": "array"
+    }
+  },
+  "required": [
+    "job_id",
+    "audio_path",
+    "scenes",
+    "captions"
+  ],
+  "title": "RenderProps",
+  "type": "object"
+}

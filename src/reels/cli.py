@@ -9,7 +9,16 @@ from typing import Optional
 import typer
 
 from .config import ROOT, load_settings
-from .contracts.models import ReelProject, Script, Topic, PublishPackage
+from .contracts.models import (
+    Alignment,
+    CaptionTrack,
+    QCReport,
+    ReelProject,
+    RenderProps,
+    Script,
+    Topic,
+    PublishPackage,
+)
 from .monitoring.logging import setup_logging
 from .orchestrator import Ctx, job_status, make_job_id, run_pipeline
 from .publishing.base import blocked_reasons
@@ -20,7 +29,7 @@ from .storage.db import JobStore
 
 app = typer.Typer(
     name="reels",
-    help="Tech explainer Reels engine (Phase 1: script + validation + plan)",
+    help="Tech explainer Reels engine (Phase 1 and local Phase 2)",
     no_args_is_help=True,
 )
 
@@ -100,6 +109,24 @@ def plan_scenes_cmd(
 
 
 @app.command()
+def render(
+    job_id: str = typer.Argument(..., help="Validated Phase 1 job to render"),
+    mode: str = typer.Option("mock", help="Render backend: mock (offline) or remotion"),
+    force: bool = typer.Option(False, help="Force re-run of completed Phase 2 stages"),
+) -> None:
+    """Run voice, alignment, captions, rendering, cover, and QC for a job."""
+    ctx = _ctx(job_id)
+    if mode not in ("mock", "remotion"):
+        typer.echo("mode must be 'mock' or 'remotion'", err=True)
+        raise SystemExit(2)
+    ctx.settings.raw.setdefault("rendering", {})["mode"] = mode
+    summary = run_pipeline(ctx, until="validate_final_video", force=force)
+    typer.echo(json.dumps({"job_id": job_id, "stages": summary, "status": job_status(ctx),
+                           "folder": str(ctx.files.dir)}, indent=2))
+    raise SystemExit(0 if summary.get("validate_final_video") == "succeeded" else 1)
+
+
+@app.command()
 def validate(file: str = typer.Argument(..., help="Script or project JSON file to validate")) -> None:
     """Validate any script/project JSON file against the contract and rules (no job needed)."""
     from .validation.script_rules import has_errors, validate_script_rules
@@ -171,7 +198,15 @@ def schema() -> None:
     """Export JSON Schemas for the renderer."""
     out = ROOT / "schemas"
     out.mkdir(exist_ok=True)
-    for name, model in {"script": Script, "reel_project": ReelProject}.items():
+    models = {
+        "script": Script,
+        "reel_project": ReelProject,
+        "render_props": RenderProps,
+        "alignment": Alignment,
+        "captions": CaptionTrack,
+        "qc_report": QCReport,
+    }
+    for name, model in models.items():
         (out / f"{name}.schema.json").write_text(json.dumps(model.model_json_schema(), indent=2), encoding="utf-8")
     typer.echo(f"wrote JSON Schemas to {out}")
 

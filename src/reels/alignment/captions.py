@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from statistics import median
 from typing import Any, Sequence
 
 SENTENCE_END = (".", "?", "!", "\u0964")
@@ -27,7 +28,7 @@ class CaptionSegment:
 
 
 def group_captions(words: Sequence[Any], max_words: int = 4, max_chars: int = 26,
-                   max_seconds: float = 2.4, pause_break: float = 0.35) -> list[CaptionSegment]:
+                   max_seconds: float = 2.0, pause_break: float = 0.35) -> list[CaptionSegment]:
     """Break on sentence end, long pauses, word/char/time limits; prefer breaking after commas."""
     segments: list[CaptionSegment] = []
     cur: list[CaptionWord] = []
@@ -60,6 +61,7 @@ def validate_caption_sync(segments: Sequence[CaptionSegment], words: Sequence[An
     if len(flat) != len(words):
         return {"passed": False, "reason": f"{len(flat)} caption words vs {len(words)} aligned words"}
     errs = sorted(abs(c.start - float(a.start)) for c, a in zip(flat, words))
-    median = errs[len(errs) // 2] if errs else 0.0
+    median_error = median(errs) if errs else 0.0
     mx = errs[-1] if errs else 0.0
-    return {"passed": median <= median_limit and mx <= max_limit, "median_s": median, "max_s": mx}
+    return {"passed": median_error <= median_limit and mx <= max_limit,
+            "median_s": median_error, "max_s": mx}

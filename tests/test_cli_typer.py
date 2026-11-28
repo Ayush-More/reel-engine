@@ -22,6 +22,7 @@ def test_schema_command_exports_files():
     assert result.exit_code == 0
     assert "wrote JSON Schemas" in result.output
     assert (ROOT / "schemas" / "script.schema.json").exists()
+    assert (ROOT / "schemas" / "render_props.schema.json").exists()
 
 
 def test_validate_example_passes():
